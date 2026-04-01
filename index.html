@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registration Form</title>
+    <title>Registration Form - GET & POST Demo with PHP</title>
     <style>
         * {
             margin: 0;
@@ -13,21 +13,22 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-            background: #f5f7fa;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 20px;
+            padding: 40px 20px;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
         }
 
         .form-card {
             background: white;
             border-radius: 16px;
             padding: 40px;
-            width: 100%;
-            max-width: 420px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
         }
 
         h1 {
@@ -43,6 +44,29 @@
             color: #6c7a8a;
             font-size: 14px;
             margin-bottom: 32px;
+        }
+
+        .method-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .method-btn {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+
+        .method-btn.active {
+            background: #4a90e2;
+            border-color: #4a90e2;
+            color: white;
         }
 
         .form-group {
@@ -64,7 +88,6 @@
             border-radius: 10px;
             font-size: 15px;
             transition: all 0.2s;
-            background: #fff;
         }
 
         input:focus {
@@ -112,112 +135,193 @@
             display: block;
         }
 
-        .db-status {
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid #ecf0f1;
+        .info-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            border-left: 4px solid #4a90e2;
+        }
+
+        .info-box h3 {
+            font-size: 14px;
+            color: #2c3e50;
+            margin-bottom: 12px;
+        }
+
+        .data-display {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: monospace;
             font-size: 12px;
-            color: #8e9eae;
-            text-align: center;
+            overflow-x: auto;
+            margin-top: 10px;
         }
     </style>
 </head>
 <body>
-    <div class="form-card">
-        <h1>Create Account</h1>
-        <div class="subtitle">Fill in your details below</div>
+    <div class="container">
+        <div class="form-card">
+            <h1>Create Account</h1>
+            <div class="subtitle">Choose method: GET (visible) or POST (hidden)</div>
+            
+            <div class="method-buttons">
+                <button type="button" id="postBtn" class="method-btn active">📮 POST Method</button>
+                <button type="button" id="getBtn" class="method-btn">🔗 GET Method</button>
+            </div>
+            
+            <form id="registerForm" method="POST" action="">
+                <div class="form-group">
+                    <label>First Name</label>
+                    <input type="text" id="firstName" name="first_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Last Name</label>
+                    <input type="text" id="lastName" name="last_name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="text" id="password" name="password" value="0000" required>
+                </div>
+                
+                <button type="submit">Register</button>
+            </form>
+            
+            <div id="message" class="message"></div>
+        </div>
         
-        <form id="registerForm">
-            <div class="form-group">
-                <label>First Name</label>
-                <input type="text" id="firstName" name="first_name" required autocomplete="off">
-            </div>
-            
-            <div class="form-group">
-                <label>Last Name</label>
-                <input type="text" id="lastName" name="last_name" required autocomplete="off">
-            </div>
-            
-            <div class="form-group">
-                <label>Email</label>
-                <input type="email" id="email" name="email" required autocomplete="off">
-            </div>
-            
-            <div class="form-group">
-                <label>Password</label>
-                <input type="text" id="password" name="password" value="0000" required>
-            </div>
-            
-            <button type="submit">Register</button>
-        </form>
-        
-        <div id="message" class="message"></div>
-        <div class="db-status">
-            📀 Connected to Dummy Database | Data stored locally
+        <div class="info-box">
+            <h3>📊 Database Status & Recent Submissions</h3>
+            <div id="dataDisplay" class="data-display">Loading...</div>
         </div>
     </div>
 
-    <script>
-        // Dummy Database - stores data in browser's localStorage
-        // This simulates a real database connection
+    <?php
+    // ============================================
+    // PHP BACKEND - Handles both GET and POST
+    // ============================================
+    
+    // Dummy Database File (simulates real database)
+    $dbFile = 'dummy_database.json';
+    
+    // Initialize dummy database if not exists
+    if (!file_exists($dbFile)) {
+        $initData = ['users' => [], 'counter' => 0];
+        file_put_contents($dbFile, json_encode($initData, JSON_PRETTY_PRINT));
+    }
+    
+    // Function to read database
+    function readDatabase($file) {
+        $content = file_get_contents($file);
+        return json_decode($content, true);
+    }
+    
+    // Function to write to database
+    function writeDatabase($file, $data) {
+        file_put_contents($file, json_encode($data, JSON_PRETTY_PRINT));
+    }
+    
+    // Function to hash password (simulates secure storage)
+    function hashPassword($password) {
+        return password_hash($password, PASSWORD_DEFAULT);
+    }
+    
+    // Check if this is a POST or GET request
+    $requestMethod = $_SERVER['REQUEST_METHOD'];
+    $responseMessage = '';
+    $responseType = '';
+    
+    if ($requestMethod === 'POST') {
+        // Handle POST request - data comes from form body (hidden)
+        $firstName = isset($_POST['first_name']) ? trim($_POST['first_name']) : '';
+        $lastName = isset($_POST['last_name']) ? trim($_POST['last_name']) : '';
+        $email = isset($_POST['email']) ? trim($_POST['email']) : '';
+        $password = isset($_POST['password']) ? $_POST['password'] : '0000';
         
-        class DummyDatabase {
-            constructor() {
-                this.dbName = 'registration_db';
-                this.initDatabase();
-            }
+        // Validate
+        if (empty($firstName) || empty($lastName) || empty($email)) {
+            $responseMessage = 'Please fill in all fields';
+            $responseType = 'error';
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $responseMessage = 'Invalid email format';
+            $responseType = 'error';
+        } else {
+            // Save to dummy database
+            $db = readDatabase($dbFile);
+            $db['counter']++;
+            $newUser = [
+                'id' => $db['counter'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'password_hash' => hashPassword($password),
+                'method' => 'POST',
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            array_unshift($db['users'], $newUser); // Add to beginning
+            writeDatabase($dbFile, $db);
             
-            initDatabase() {
-                if (!localStorage.getItem(this.dbName)) {
-                    localStorage.setItem(this.dbName, JSON.stringify([]));
-                    console.log('✅ Dummy database initialized');
-                }
-            }
-            
-            insert(data) {
-                const users = JSON.parse(localStorage.getItem(this.dbName));
-                const newUser = {
-                    id: Date.now(),
-                    ...data,
-                    password_hash: this.hashPassword(data.password),
-                    created_at: new Date().toISOString()
-                };
-                users.push(newUser);
-                localStorage.setItem(this.dbName, JSON.stringify(users));
-                return newUser;
-            }
-            
-            hashPassword(password) {
-                // Simple hash simulation (in real app, use proper hashing on server)
-                let hash = 0;
-                for (let i = 0; i < password.length; i++) {
-                    hash = ((hash << 5) - hash) + password.charCodeAt(i);
-                    hash |= 0;
-                }
-                return 'hash_' + Math.abs(hash).toString(16);
-            }
-            
-            getAll() {
-                return JSON.parse(localStorage.getItem(this.dbName));
-            }
-            
-            findByEmail(email) {
-                const users = this.getAll();
-                return users.find(u => u.email === email);
-            }
+            $responseMessage = "✅ POST Registration successful! Welcome $firstName $lastName. Data saved to database.";
+            $responseType = 'success';
         }
         
-        // Initialize dummy database
-        const db = new DummyDatabase();
+        // Return JSON response for AJAX
+        if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+            echo json_encode(['type' => $responseType, 'message' => $responseMessage]);
+            exit;
+        }
+    }
+    ?>
+    
+    <script>
+        // ============================================
+        // JAVASCRIPT - Handles UI and GET/POST switching
+        // ============================================
         
-        // Handle form submission
         const form = document.getElementById('registerForm');
         const messageDiv = document.getElementById('message');
+        const postBtn = document.getElementById('postBtn');
+        const getBtn = document.getElementById('getBtn');
+        const dataDisplay = document.getElementById('dataDisplay');
         
-        form.addEventListener('submit', (e) => {
+        let currentMethod = 'POST';
+        
+        // Switch to POST method
+        postBtn.addEventListener('click', () => {
+            currentMethod = 'POST';
+            form.method = 'POST';
+            postBtn.classList.add('active');
+            getBtn.classList.remove('active');
+            showMessage('Switched to POST method - data will be hidden in request body', 'success');
+            setTimeout(() => {
+                messageDiv.className = 'message';
+            }, 2000);
+        });
+        
+        // Switch to GET method
+        getBtn.addEventListener('click', () => {
+            currentMethod = 'GET';
+            form.method = 'GET';
+            getBtn.classList.add('active');
+            postBtn.classList.remove('active');
+            showMessage('Switched to GET method - data will be visible in URL', 'success');
+            setTimeout(() => {
+                messageDiv.className = 'message';
+            }, 2000);
+        });
+        
+        // Handle form submission
+        form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            // Get form values
             const firstName = document.getElementById('firstName').value.trim();
             const lastName = document.getElementById('lastName').value.trim();
             const email = document.getElementById('email').value.trim();
@@ -234,40 +338,77 @@
                 return;
             }
             
-            // Check if email already exists in dummy database
-            const existingUser = db.findByEmail(email);
-            if (existingUser) {
-                showMessage('Email already registered. Please use a different email.', 'error');
-                return;
-            }
-            
-            // Save to dummy database
-            try {
-                const newUser = db.insert({
+            if (currentMethod === 'POST') {
+                // POST: Send data via AJAX (hidden)
+                const formData = new URLSearchParams();
+                formData.append('first_name', firstName);
+                formData.append('last_name', lastName);
+                formData.append('email', email);
+                formData.append('password', password);
+                
+                try {
+                    const response = await fetch(window.location.href, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: formData.toString()
+                    });
+                    
+                    const result = await response.json();
+                    showMessage(result.message, result.type);
+                    
+                    if (result.type === 'success') {
+                        form.reset();
+                        document.getElementById('password').value = '0000';
+                        loadDatabaseData();
+                    }
+                } catch (error) {
+                    showMessage('Error connecting to server', 'error');
+                }
+            } else {
+                // GET: Submit form normally (data visible in URL)
+                // Build URL with query parameters
+                const params = new URLSearchParams({
                     first_name: firstName,
                     last_name: lastName,
                     email: email,
                     password: password
                 });
                 
-                // Show success message
-                showMessage(`✅ Registration successful! Welcome ${firstName} ${lastName}. Data saved to dummy database.`, 'success');
+                // Show what the GET URL will look like
+                const getUrl = window.location.pathname + '?' + params.toString();
+                console.log('GET Request URL:', getUrl);
                 
-                // Clear form (keep password default)
-                document.getElementById('firstName').value = '';
-                document.getElementById('lastName').value = '';
-                document.getElementById('email').value = '';
-                document.getElementById('password').value = '0000';
-                
-                // Log to console to show database contents
-                console.log('📀 Dummy Database Contents:', db.getAll());
-                console.log('🔐 Password hash stored:', newUser.password_hash);
-                
-            } catch (error) {
-                showMessage('Database error. Please try again.', 'error');
-                console.error('Database error:', error);
+                // Submit the form with GET method
+                form.method = 'GET';
+                form.action = '?' + params.toString();
+                form.submit();
             }
         });
+        
+        // Load and display database contents
+        async function loadDatabaseData() {
+            try {
+                const response = await fetch('get_data.php');
+                const data = await response.json();
+                
+                if (data.users && data.users.length > 0) {
+                    let html = '<strong>📀 Recent Registrations:</strong><br><br>';
+                    data.users.slice(0, 5).forEach(user => {
+                        html += `• ${user.first_name} ${user.last_name} | ${user.email}<br>`;
+                        html += `  Method: ${user.method} | Time: ${user.created_at}<br><br>`;
+                    });
+                    html += `<em>Total users: ${data.users.length}</em>`;
+                    dataDisplay.innerHTML = html;
+                } else {
+                    dataDisplay.innerHTML = 'No users registered yet. Submit the form above!';
+                }
+            } catch (error) {
+                dataDisplay.innerHTML = 'Database ready. Submit a form to see data appear!';
+            }
+        }
         
         function showMessage(text, type) {
             messageDiv.textContent = text;
@@ -278,8 +419,72 @@
             }, 4000);
         }
         
-        // Optional: Display current database stats in console
-        console.log('📀 Dummy Database Ready | Total users:', db.getAll().length);
+        // Load database data on page load
+        loadDatabaseData();
+        
+        // Handle GET parameters on page load (if form was submitted via GET)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('first_name')) {
+            // GET request was made - show the data
+            const firstName = urlParams.get('first_name');
+            const lastName = urlParams.get('last_name');
+            const email = urlParams.get('email');
+            const password = urlParams.get('password');
+            
+            // Save to database via PHP (AJAX call)
+            const formData = new URLSearchParams();
+            formData.append('first_name', firstName);
+            formData.append('last_name', lastName);
+            formData.append('email', email);
+            formData.append('password', password);
+            
+            fetch(window.location.href, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: formData.toString()
+            })
+            .then(res => res.json())
+            .then(result => {
+                showMessage(`GET Submission: ${result.message}`, result.type);
+                loadDatabaseData();
+                // Clear URL parameters without reloading
+                window.history.replaceState({}, document.title, window.location.pathname);
+            });
+        }
     </script>
+    
+    <?php
+    // Handle GET request display and save
+    if ($requestMethod === 'GET' && isset($_GET['first_name'])) {
+        $firstName = isset($_GET['first_name']) ? trim($_GET['first_name']) : '';
+        $lastName = isset($_GET['last_name']) ? trim($_GET['last_name']) : '';
+        $email = isset($_GET['email']) ? trim($_GET['email']) : '';
+        $password = isset($_GET['password']) ? $_GET['password'] : '0000';
+        
+        if (!empty($firstName) && !empty($lastName) && !empty($email)) {
+            $db = readDatabase($dbFile);
+            $db['counter']++;
+            $newUser = [
+                'id' => $db['counter'],
+                'first_name' => $firstName,
+                'last_name' => $lastName,
+                'email' => $email,
+                'password_hash' => hashPassword($password),
+                'method' => 'GET',
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+            array_unshift($db['users'], $newUser);
+            writeDatabase($dbFile, $db);
+            
+            echo '<script>
+                showMessage("✅ GET Registration successful! Data saved to database.", "success");
+                loadDatabaseData();
+            </script>';
+        }
+    }
+    ?>
 </body>
 </html>
